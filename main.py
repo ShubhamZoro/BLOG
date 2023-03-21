@@ -64,13 +64,13 @@ class Comment(db.Model):
 db.create_all()
 
 
-def admin_only(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if current_user.id != 1:
-            return abort(403)
-        return f(*args, **kwargs)
-    return decorated_function
+# def admin_only(f):
+#     @wraps(f)
+#     def decorated_function(*args, **kwargs):
+#         if current_user.id != 1:
+#             return abort(403)
+#         return f(*args, **kwargs)
+#     return decorated_function
 
 
 @app.route('/')
@@ -146,7 +146,7 @@ def ResetPassword():
             user.password=hash_and_salted_password
             db.session.commit()
             login_user(user)
-            return redirect(url_for("home"))
+            return redirect(url_for("get_all_posts"))
         else:
             flash('please enter valid Email or Password.')
             return redirect(url_for('ResetPassword'))
@@ -154,6 +154,7 @@ def ResetPassword():
     return render_template("ResetPassword.html", form=form, )
 
 @app.route('/logout')
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('get_all_posts'))
@@ -191,7 +192,7 @@ def contact():
 
 
 @app.route("/new-post", methods=["GET", "POST"])
-@admin_only
+@login_required
 def add_new_post():
     form = CreatePostForm()
     if form.validate_on_submit():
@@ -213,7 +214,7 @@ def add_new_post():
 
 
 @app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
-@admin_only
+@login_required
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
     edit_form = CreatePostForm(
@@ -235,7 +236,7 @@ def edit_post(post_id):
 
 
 @app.route("/delete/<int:post_id>")
-@admin_only
+# @admin_only
 def delete_post(post_id):
     post_to_delete = BlogPost.query.get(post_id)
     db.session.delete(post_to_delete)
