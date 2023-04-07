@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import LoginForm, RegisterForm, CreatePostForm, CommentForm,Reset
+from forms import LoginForm, RegisterForm, CreatePostForm, CommentForm,Reset,SearchForm
 from flask_gravatar import Gravatar
 
 app = Flask(__name__)
@@ -71,7 +71,6 @@ db.create_all()
 #             return abort(403)
 #         return f(*args, **kwargs)
 #     return decorated_function
-
 
 @app.route('/')
 def get_all_posts():
@@ -243,6 +242,17 @@ def delete_post(post_id):
     db.session.commit()
     return redirect(url_for('get_all_posts'))
 
+@app.context_processor
+def base():
+    form=SearchForm()
+    return dict(form=form)
 
-if __name__ == "__main__":
+@app.route('/search',methods=["POST"])
+def search():
+    form=SearchForm()
+    if form.validate_on_submit():
+        searched=form.searched.data
+        return render_template("Search.html",form=form,searched=searched)
+
+if __name__=='__main__':
     app.run(debug=True)

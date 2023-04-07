@@ -4,7 +4,9 @@ from wtforms.validators import DataRequired, URL
 from flask_ckeditor import CKEditorField
 
 
-
+class SearchForm(FlaskForm):
+    searched = StringField("Searched", validators=[DataRequired()])
+    submit = SubmitField("Submit")
 
 class CreatePostForm(FlaskForm):
     title = StringField("Blog Post Title", validators=[DataRequired()])
@@ -35,3 +37,4 @@ class Reset(FlaskForm):
 class CommentForm(FlaskForm):
     comment_text = CKEditorField("Comment", validators=[DataRequired()])
     submit = SubmitField("Submit Comment")
+
