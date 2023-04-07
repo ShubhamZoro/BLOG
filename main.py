@@ -257,5 +257,11 @@ def search():
         posts =posts.order_by(BlogPost.title).all()
         return render_template("Search.html",form=form,searched=searched,posts=posts)
 
+@app.route('/my_posts')
+@login_required
+def my_posts():
+    post=current_user.posts
+    
+    return render_template("mypost.html",posts=post)
 if __name__=='__main__':
     app.run(debug=True)
