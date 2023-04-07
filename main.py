@@ -250,9 +250,12 @@ def base():
 @app.route('/search',methods=["POST"])
 def search():
     form=SearchForm()
+    posts=BlogPost.query
     if form.validate_on_submit():
         searched=form.searched.data
-        return render_template("Search.html",form=form,searched=searched)
+        posts=posts.filter(BlogPost.body.like('%' + searched + '%'))
+        posts =posts.order_by(BlogPost.title).all()
+        return render_template("Search.html",form=form,searched=searched,posts=posts)
 
 if __name__=='__main__':
     app.run(debug=True)
