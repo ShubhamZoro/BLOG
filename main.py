@@ -9,19 +9,32 @@ from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from forms import LoginForm, RegisterForm, CreatePostForm, CommentForm,Reset,SearchForm
 from flask_gravatar import Gravatar
-
+from flask_mail import Mail,Message
+from itsdangerous import URLSafeTimedSerializer
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "8BYkEfBA6O6donzWlSihBXox7C0sKR6b"
+
 ckeditor = CKEditor(app)
 Bootstrap(app)
 gravatar = Gravatar(app, size=100, rating='g', default='retro', force_default=False, force_lower=False, use_ssl=False, base_url=None)
-
+email=""
+name=""
+password=""
 ##CONNECT TO DB
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///blog.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAIL_SERVER']='smtp.gmail.com'
+app.config['MAIL_PORT']=465
+app.config['MAIL_USERNAME']='s9905020863@gmail.com'
+app.config['MAIL_PASSWORD']='olbcumdoaviwfpbj'
+app.config['MAIL_USE_TLS']=False
+app.config['MAIL_USE_SSL']=True
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
+mail=Mail(app)
+s=URLSafeTimedSerializer("8BYkEfBA6O6donzWlSihBXox7C0sKR6b")
+
 
 
 @login_manager.user_loader
@@ -96,18 +109,40 @@ def register():
             method='pbkdf2:sha256',
             salt_length=8
         )
-        new_user = User(
-            email=form.email.data,
-            name=form.name.data,
-            password=hash_and_salted_password,
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        login_user(new_user)
-        return redirect(url_for("get_all_posts"))
+       
+        global email,name,password
+        email=form.email.data
+        name=form.name.data
+        password=form.password.data
+        
+        
+
+        token = s.dumps(form.email.data,salt='email-confirm')
+        print(token)
+        msg=Message("This is an conformation link",sender='s9905020863@gmail.com',recipients=[form.email.data])
+        link=url_for('confirm_email',token=token,_external=True)
+        print(link)
+        msg.body='your link is {}'.format(link)
+        mail.send(msg)
+
+        return render_template("verify.html")
 
     return render_template("register.html", form=form, current_user=current_user)
 
+@app.route('/confirm_email/<token>')
+def confirm_email(token):
+    global email,name,password
+    new_user = User(
+            email=email,
+            name=name,
+            password=password
+        )
+    db.session.add(new_user)
+    db.session.commit()
+    login_user(new_user)
+    email=s.loads(token,salt='email-confirm',max_age=300)
+    
+    return redirect(url_for("get_all_posts"))
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
