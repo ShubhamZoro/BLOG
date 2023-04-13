@@ -3,6 +3,7 @@ from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
 from functools import wraps
+import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
@@ -12,8 +13,7 @@ from flask_gravatar import Gravatar
 from flask_mail import Mail,Message
 from itsdangerous import URLSafeTimedSerializer
 app = Flask(__name__)
-app.config['SECRET_KEY'] = "8BYkEfBA6O6donzWlSihBXox7C0sKR6b"
-
+app.config['SECRET_KEY'] = os.getenv('secret_key')
 ckeditor = CKEditor(app)
 Bootstrap(app)
 gravatar = Gravatar(app, size=100, rating='g', default='retro', force_default=False, force_lower=False, use_ssl=False, base_url=None)
@@ -25,15 +25,15 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///blog.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER']='smtp.gmail.com'
 app.config['MAIL_PORT']=465
-app.config['MAIL_USERNAME']='s9905020863@gmail.com'
-app.config['MAIL_PASSWORD']='olbcumdoaviwfpbj'
+app.config['MAIL_USERNAME']=os.getenv('email')
+app.config['MAIL_PASSWORD']=os.getenv('password')
 app.config['MAIL_USE_TLS']=False
 app.config['MAIL_USE_SSL']=True
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 mail=Mail(app)
-s=URLSafeTimedSerializer("8BYkEfBA6O6donzWlSihBXox7C0sKR6b")
+s=URLSafeTimedSerializer(os.getenv('secret_key'))
 
 
 
