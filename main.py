@@ -1,8 +1,8 @@
-from flask import Flask, render_template, redirect, url_for, flash, abort
+from flask import Flask, render_template, redirect, url_for, flash, session
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
-from functools import wraps
+# from functools import wraps
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
@@ -12,16 +12,25 @@ from forms import LoginForm, RegisterForm, CreatePostForm, CommentForm,Reset,Sea
 from flask_gravatar import Gravatar
 from flask_mail import Mail,Message
 from itsdangerous import URLSafeTimedSerializer
+import mysql.connector
+
+mydb=mysql.connector.connect(host='localhost',user='root',password='20gcebcs091',database='users',auth_plugin = 'mysql_native_password')
+my_cursor=mydb.cursor()
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('secret_key')
 ckeditor = CKEditor(app)
 Bootstrap(app)
 gravatar = Gravatar(app, size=100, rating='g', default='retro', force_default=False, force_lower=False, use_ssl=False, base_url=None)
-email=""
-name=""
-password=""
-##CONNECT TO DB
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///blog.db"
+emailg=""
+nameg=""
+passwordg=""
+
+# from sqlalchemy import create_engine
+# connection_string = "mysql+mysqlconnector://root:20gcebcs091@localhost:3306/users"
+# engine = create_engine(connection_string, echo=True)
+#CONNECT TO DB
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://root:{os.getenv('mysql_password')}@localhost/users"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER']='smtp.gmail.com'
 app.config['MAIL_PORT']=465
@@ -39,6 +48,7 @@ s=URLSafeTimedSerializer(os.getenv('secret_key'))
 
 @login_manager.user_loader
 def load_user(user_id):
+    print(user_id)
     return User.query.get(int(user_id))
 
 
@@ -78,7 +88,9 @@ class Comment(db.Model):
 with app.app_context():
     db.create_all()
 
-
+# sql_select_query1 = f"""DROP TABLE users,blog_posts,comments"""
+#
+# my_cursor.execute(sql_select_query1)
 # def admin_only(f):
 #     @wraps(f)
 #     def decorated_function(*args, **kwargs):
@@ -109,13 +121,14 @@ def register():
             method='pbkdf2:sha256',
             salt_length=8
         )
-       
-        global email,name,password
-        email=form.email.data
-        name=form.name.data
-        password=form.password.data
-        
-        
+
+        global emailg,nameg,passwordg
+
+        emailg=form.email.data
+        nameg=form.name.data
+        passwordg=hash_and_salted_password
+
+
 
         token = s.dumps(form.email.data,salt='email-confirm')
         print(token)
@@ -131,17 +144,21 @@ def register():
 
 @app.route('/confirm_email/<token>')
 def confirm_email(token):
-    global email,name,password
+    memail = s.loads(token, salt='email-confirm', max_age=300)
+    global emailg,nameg,passwordg
     new_user = User(
-            email=email,
-            name=name,
-            password=password
+            email=emailg,
+            name=nameg,
+            password=passwordg
         )
+
+
+
     db.session.add(new_user)
     db.session.commit()
     login_user(new_user)
-    email=s.loads(token,salt='email-confirm',max_age=300)
-    
+
+
     return redirect(url_for("get_all_posts"))
 
 @app.route('/login', methods=["GET", "POST"])
@@ -149,18 +166,28 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         email = form.email.data
+        print(type(email))
         password = form.password.data
 
-        user = User.query.filter_by(email=email).first()
+        user1 = User.query.filter_by(email=email).first()
+        query = f"SELECT id,email,password FROM users WHERE email='{email}'"
+        print(email)
+        my_cursor.execute(query)
+        user= my_cursor.fetchone()
+
+        print(user)
         # Email doesn't exist or password incorrect.
-        if not user:
+        if not user[0]:
             flash("That email does not exist, please try again.")
             return redirect(url_for('login'))
-        elif not check_password_hash(user.password, password):
+        elif not check_password_hash(user[2], password):
             flash('Password incorrect, please try again.')
             return redirect(url_for('login'))
         else:
-            login_user(user)
+            session['loggedin'] = True
+            session['id'] = user[0]
+            session['email'] = user[1]
+            login_user(user1)
             return redirect(url_for('get_all_posts'))
     return render_template("login.html", form=form, current_user=current_user)
 
@@ -178,16 +205,40 @@ def ResetPassword():
                 method='pbkdf2:sha256',
                 salt_length=8
             )
-            user=User.query.filter_by(email=email).first()
-            user.password=hash_and_salted_password
-            db.session.commit()
-            login_user(user)
-            return redirect(url_for("get_all_posts"))
+            global emailg,passwordg;
+            emailg=email
+            passwordg=hash_and_salted_password
+
+            token = s.dumps(form.email.data, salt='reset')
+            print(token)
+            msg = Message("This is an conformation link", sender='s9905020863@gmail.com', recipients=[form.email.data])
+            link = url_for('reset', token=token, _external=True)
+            print(link)
+            msg.body = 'your link is {}'.format(link)
+            mail.send(msg)
+
+            return render_template("verify.html")
+
         else:
-            flash('please enter valid Email or Password.')
+            flash('please enter valid Email or Password does not match.')
             return redirect(url_for('ResetPassword'))
 
     return render_template("ResetPassword.html", form=form, )
+
+@app.route('/reset/<token>')
+def reset(token):
+    global emailg ,passwordg
+    memail = s.loads(token, salt='reset', max_age=300)
+    user = User.query.filter_by(email=emailg).first()
+    sql = f"UPDATE users SET password = '{passwordg}' WHERE email = '{emailg}'"
+    my_cursor.execute(sql)
+
+    mydb.commit()
+    # user.password = passwordg
+    # db.session.commit()
+    login_user(user)
+
+    return redirect(url_for("get_all_posts"))
 
 @app.route('/logout')
 @login_required
@@ -199,8 +250,14 @@ def logout():
 @app.route("/post/<int:post_id>", methods=["GET", "POST"])
 def show_post(post_id):
     form = CommentForm()
-    requested_post = BlogPost.query.get(post_id)
+    # requested_post = BlogPost.query.get(post_id)
+    sql_select_query = f"""SELECT *
+                          FROM users,blog_posts WHERE users.id={post_id}"""
 
+    my_cursor.execute(sql_select_query)
+    out = my_cursor.fetchall()
+    requested_post = out
+    print(requested_post)
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash("You need to login or register to comment.")
@@ -231,7 +288,9 @@ def contact():
 @login_required
 def add_new_post():
     form = CreatePostForm()
+
     if form.validate_on_submit():
+
         new_post = BlogPost(
             title=form.title.data,
             subtitle=form.subtitle.data,
@@ -274,9 +333,12 @@ def edit_post(post_id):
 @app.route("/delete/<int:post_id>")
 # @admin_only
 def delete_post(post_id):
-    post_to_delete = BlogPost.query.get(post_id)
-    db.session.delete(post_to_delete)
-    db.session.commit()
+    # post_to_delete = BlogPost.query.get(post_id)
+    # db.session.delete(post_to_delete)
+    # db.session.commit()
+    sql_Delete_query = f"""Delete from blog_posts where id = {post_id}"""
+    my_cursor.execute(sql_Delete_query)
+    mydb.commit()
     return redirect(url_for('get_all_posts'))
 
 @app.context_processor
@@ -298,7 +360,7 @@ def search():
 @login_required
 def my_posts():
     post=current_user.posts
-    
+
     return render_template("mypost.html",posts=post)
 if __name__=='__main__':
     app.run(debug=True)
