@@ -14,7 +14,7 @@ from flask_mail import Mail,Message
 from itsdangerous import URLSafeTimedSerializer
 import mysql.connector
 
-mydb=mysql.connector.connect(host='localhost',user='root',password=f"{os.getenv('mysqlpassword')}",database='users',auth_plugin = 'mysql_native_password')
+mydb=mysql.connector.connect(host='localhost',user='root',password=f"{os.getenv('mysql_password')}",database='users',auth_plugin = 'mysql_native_password')
 my_cursor=mydb.cursor()
 
 app = Flask(__name__)
