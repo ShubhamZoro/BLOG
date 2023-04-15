@@ -5,17 +5,17 @@
 {% include "header.html" %}
 
 
-<header class="masthead" style="background-image: url('{{post[0][10]}}')">
+<header class="masthead" style="background-image: url('{{post.img_url}}')">
     <div class="overlay"></div>
     <div class="container">
         <div class="row">
             <div class="col-lg-8 col-md-10 mx-auto">
                 <div class="post-heading">
-                    <h1>{{post[0][6]}}</h1>
-                    <h2 class="subheading">{{post[0][7]}}</h2>
+                    <h1>{{post.title}}</h1>
+                    <h2 class="subheading">{{post.subtitle}}</h2>
                     <span class="meta">Posted by
-              {{post[0][3]}}
-              on {{post[0][8]}}</span>
+              {{post.author.name}}
+              on {{post.date}}</span>
                 </div>
             </div>
         </div>
@@ -27,17 +27,18 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-8 col-md-10 mx-auto">
-                {{ post[0][9]|safe }}
+                {{post.overview|safe}}
+                {{ post.body|safe }}
                 <hr>
-                {% if current_user.id == post[0][5] %}
+                {% if current_user.id == post.author_id %}
                 <div class="clearfix">
-                    <a class="btn btn-primary float-right" href="{{url_for('edit_post', post_id=post[0][4])}}">Edit
+                    <a class="btn btn-primary float-right" href="{{url_for('edit_post', post_id=post.id)}}">Edit
                         Post</a>
                 </div>
                 {% endif %}
 
-                {% if current_user.id == post[0][5]: %}
-                <a href="{{url_for('delete_post', post_id=post[0][4]) }}">✘</a>
+                {% if current_user.id == post.author_id: %}
+                <a href="{{url_for('delete_post', post_id=post.id) }}">✘</a>
                 {% endif %}
 
 

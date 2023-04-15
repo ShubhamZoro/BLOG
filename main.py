@@ -13,6 +13,7 @@ from flask_gravatar import Gravatar
 from flask_mail import Mail,Message
 from itsdangerous import URLSafeTimedSerializer
 import mysql.connector
+import random
 
 mydb=mysql.connector.connect(host='localhost',user='root',password=f"{os.getenv('mysql_password')}",database='users',auth_plugin = 'mysql_native_password')
 my_cursor=mydb.cursor()
@@ -68,9 +69,11 @@ class BlogPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     author = relationship("User", back_populates="posts")
-    title = db.Column(db.String(250), unique=True, nullable=False)
+    title = db.Column(db.String(250), unique=False, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
+    genre=db.Column(db.String(40),nullable=False)
     date = db.Column(db.String(250), nullable=False)
+    overview=db.Column(db.String(5000), nullable=False)
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
     comments =relationship("Comment", back_populates="parent_post")
@@ -85,10 +88,20 @@ class Comment(db.Model):
     comment_author = relationship("User", back_populates="comments")
     text = db.Column(db.Text, nullable=False)
 
+class UserLookups(db.Model):
+    __tablename__ = "lookups"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id=db.Column(db.Integer, db.ForeignKey("users.id"))
+    title = db.Column(db.String(250), unique=False, nullable=False)
+    subtitle = db.Column(db.String(250), nullable=False)
+    genre=db.Column(db.String(40),nullable=False)
+    overview=db.Column(db.String(250), nullable=False)
+
+
 with app.app_context():
     db.create_all()
-
-# sql_select_query1 = f"""DROP TABLE users,blog_posts,comments"""
+#
+# sql_select_query1 = f"""DROP TABLE users,blog_posts,comments, lookups"""
 #
 # my_cursor.execute(sql_select_query1)
 # def admin_only(f):
@@ -102,6 +115,8 @@ with app.app_context():
 @app.route('/')
 def get_all_posts():
     posts = BlogPost.query.all()
+    if len(posts)>5:
+        posts=random.choice(posts)[0:5]
     return render_template("index.html", all_posts=posts, current_user=current_user)
 
 
@@ -250,14 +265,28 @@ def logout():
 @app.route("/post/<int:post_id>", methods=["GET", "POST"])
 def show_post(post_id):
     form = CommentForm()
-    # requested_post = BlogPost.query.get(post_id)
-    sql_select_query = f"""SELECT *
-                          FROM users,blog_posts WHERE users.id={post_id}"""
+    requested_post = BlogPost.query.get(post_id)
+    # sql_select_query = f"""SELECT *
+    #                       FROM users,blog_posts WHERE users.id={post_id}"""
 
-    my_cursor.execute(sql_select_query)
-    out = my_cursor.fetchall()
-    requested_post = out
+    # my_cursor.execute(sql_select_query)
+    # out = my_cursor.fetchall()
+    #
+    # requested_post = out
+
     print(requested_post)
+    try:
+        print(current_user.id)
+        lookups=UserLookups(title=requested_post.title,
+                            user_id=current_user.id,
+                             overview=requested_post.overview,
+                             subtitle=requested_post.title,
+                             genre=requested_post.genre
+                             )
+        db.session.add(lookups)
+        db.session.commit()
+    except:
+        print("not found")
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash("You need to login or register to comment.")
@@ -294,7 +323,9 @@ def add_new_post():
         new_post = BlogPost(
             title=form.title.data,
             subtitle=form.subtitle.data,
+            genre=form.genre.data,
             body=form.body.data,
+            overview=form.overview.data,
             img_url=form.img_url.data,
             author=current_user,
             date=date.today().strftime("%B %d, %Y")
@@ -315,15 +346,20 @@ def edit_post(post_id):
     edit_form = CreatePostForm(
         title=post.title,
         subtitle=post.subtitle,
+        genre=post.genre,
         img_url=post.img_url,
         author=current_user,
-        body=post.body
+        body=post.body,
+        overview=post.overview
     )
     if edit_form.validate_on_submit():
         post.title = edit_form.title.data
         post.subtitle = edit_form.subtitle.data
         post.img_url = edit_form.img_url.data
         post.body = edit_form.body.data
+        post.overview=edit_form.overview.data
+        post.genre=edit_form.genre.data
+
         db.session.commit()
         return redirect(url_for("show_post", post_id=post.id))
 
