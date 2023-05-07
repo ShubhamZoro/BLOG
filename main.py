@@ -88,14 +88,14 @@ class Comment(db.Model):
     comment_author = relationship("User", back_populates="comments")
     text = db.Column(db.Text, nullable=False)
 
-class UserLookups(db.Model):
-    __tablename__ = "lookups"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id=db.Column(db.Integer, db.ForeignKey("users.id"))
-    title = db.Column(db.String(250), unique=False, nullable=False)
-    subtitle = db.Column(db.String(250), nullable=False)
-    genre=db.Column(db.String(40),nullable=False)
-    overview=db.Column(db.String(250), nullable=False)
+# class UserLookups(db.Model):
+#     __tablename__ = "lookups"
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id=db.Column(db.Integer, db.ForeignKey("users.id"))
+#     title = db.Column(db.String(250), unique=False, nullable=False)
+#     subtitle = db.Column(db.String(250), nullable=False)
+#     genre=db.Column(db.String(40),nullable=False)
+#     overview=db.Column(db.String(250), nullable=False)
 
 
 with app.app_context():
@@ -275,18 +275,18 @@ def show_post(post_id):
     # requested_post = out
 
     print(requested_post)
-    try:
-        print(current_user.id)
-        lookups=UserLookups(title=requested_post.title,
-                            user_id=current_user.id,
-                             overview=requested_post.overview,
-                             subtitle=requested_post.title,
-                             genre=requested_post.genre
-                             )
-        db.session.add(lookups)
-        db.session.commit()
-    except:
-        print("not found")
+#     try:
+#         print(current_user.id)
+#         lookups=UserLookups(title=requested_post.title,
+#                             user_id=current_user.id,
+#                              overview=requested_post.overview,
+#                              subtitle=requested_post.title,
+#                              genre=requested_post.genre
+#                              )
+#         db.session.add(lookups)
+#         db.session.commit()
+    
+    print("not found")
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash("You need to login or register to comment.")
