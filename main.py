@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, session
+from flask import Flask, render_template, redirect, url_for, flash, session 
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
